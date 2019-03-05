@@ -1,7 +1,5 @@
 package depsolver;
 
-import java.util.ArrayList;
-
 public class SatPackage {
     private String version;
     private String packageName;
