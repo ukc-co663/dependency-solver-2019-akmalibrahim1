@@ -1,10 +1,12 @@
 package depsolver;
 
-public class Constraints {
+import java.util.ArrayList;
+
+public class SatPackage {
     private String version;
     private String packageName;
 
-    public Constraints(String version, String packageName){
+    public SatPackage(String version, String packageName){
         this.version = version;
         this.packageName = packageName;
     }
