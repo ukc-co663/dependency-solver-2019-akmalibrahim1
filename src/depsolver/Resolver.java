@@ -1,6 +1,7 @@
 package depsolver;
 
 import com.microsoft.z3.*;
+import com.microsoft.z3.enumerations.Z3_lbool;
 
 import java.util.*;
 
@@ -9,11 +10,11 @@ public class Resolver {
     private Solver solver;
     private Context ctx;
     private List<String> con;
-    private List<BoolExpr> finalExpression;
+    private List<BoolExpr> expressionsLlist;
     private HashSet<Package> usedRepo;
 
     public Resolver(List<Package> repo, List<String> constraints){
-        finalExpression = new ArrayList<>();
+        expressionsLlist = new ArrayList<>();
         usedRepo = new HashSet<>();
         ctx = new Context();
         solver = ctx.mkSolver();
@@ -37,8 +38,8 @@ public class Resolver {
                     implication.add(buildConflicts(currentPackage, p.getConflicts()));
                     implicationList.add(ctx.mkImplies(currentPackage, ctx.mkAnd(implication.toArray(new BoolExpr [implication.size()]))));
                 }
-                finalExpression.add(ctx.mkOr(include.toArray(new BoolExpr[include.size()])));
-                finalExpression.add(ctx.mkOr(implicationList.toArray(new BoolExpr[implicationList.size()])));
+                expressionsLlist.add(ctx.mkOr(include.toArray(new BoolExpr[include.size()])));
+                expressionsLlist.add(ctx.mkOr(implicationList.toArray(new BoolExpr[implicationList.size()])));
             } else {
                 String temp = constr.replace(Constants.EXCLUDE, "");
                 List<Package> current  = getPackageVersions(temp);
@@ -57,17 +58,21 @@ public class Resolver {
                 BoolExpr currentPackage = ctx.mkBoolConst(p.getName() + "=" + p.getVersion());
                 List<BoolExpr> implication = getAllDependencyConstraints(p, p.getDepends());
                 implication.add(buildConflicts(currentPackage, p.getConflicts()));
-                finalExpression.add(ctx.mkImplies(currentPackage, ctx.mkAnd(implication.toArray(new BoolExpr [implication.size()]))));
+                expressionsLlist.add(ctx.mkImplies(currentPackage, ctx.mkAnd(implication.toArray(new BoolExpr [implication.size()]))));
             }
         }
-        BoolExpr result = ctx.mkAnd(finalExpression.toArray(new BoolExpr[finalExpression.size()]));
-        solver.add(result);
+        BoolExpr finalExpression = ctx.mkAnd(expressionsLlist.toArray(new BoolExpr[expressionsLlist.size()]));
+        solver.add(finalExpression);
         if(solver.check() == Status.SATISFIABLE){
             System.out.println("Result Available");
             Model m = solver.getModel();
-            List<FuncDecl> dec = new ArrayList<>(Arrays.asList(m.getDecls()));
-            dec.forEach(d -> System.out.println(d.getName().toString()));
-            System.out.println(m.toString());
+            List<FuncDecl> dec = new ArrayList<>(Arrays.asList(m.getConstDecls()));
+            List<String> result = new ArrayList<>();
+            dec.forEach(d -> {
+                if(m.getConstInterp(d).getBoolValue() == Z3_lbool.Z3_L_TRUE)
+                    result.add(d.getName().toString());
+            });
+            result.forEach(r -> System.out.println(r));
         } else {
             System.out.println("Result Unavailable");
         }
@@ -114,8 +119,6 @@ public class Resolver {
                 }
             }
         }
-
-
         return packages;
     }
 
