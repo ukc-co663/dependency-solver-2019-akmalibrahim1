@@ -1,11 +1,6 @@
 package depsolver;
 
-import com.microsoft.z3.BoolExpr;
-import com.microsoft.z3.Context;
-import com.microsoft.z3.Probe;
-import com.microsoft.z3.Solver;
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import com.sun.tools.internal.jxc.ap.Const;
+import com.microsoft.z3.*;
 
 import java.util.*;
 
@@ -18,18 +13,19 @@ public class Resolver {
     private HashSet<Package> usedRepo;
 
     public Resolver(List<Package> repo, List<String> constraints){
-        this.repo = repo;
+        finalExpression = new ArrayList<>();
+        usedRepo = new HashSet<>();
         ctx = new Context();
         solver = ctx.mkSolver();
         con = constraints;
-        finalExpression = new ArrayList<>();
-        usedRepo = new HashSet<>();
+        this.repo = repo;
+
     }
 
     public void Run(){
         for(String constr : con){
             if(constr.contains(Constants.INCLUDE)){
-                String temp = constr.replace(Constants.INCLUDE, " ");
+                String temp = constr.replace(Constants.INCLUDE, "");
                 List<Package> current  = getPackageVersions(temp);
                 List<BoolExpr> include = new ArrayList<>();
                 List<BoolExpr> implicationList = new ArrayList<>();
@@ -37,14 +33,14 @@ public class Resolver {
                     usedRepo.add(p);
                     BoolExpr currentPackage = ctx.mkBoolConst(p.getName() + "=" + p.getVersion());
                     include.add(currentPackage);
-                    BoolExpr implication = getAllDependencyConstraints(p, p.getDepends());
-                    BoolExpr conflicts = buildConflicts(currentPackage, p.getConflicts());
-                    implicationList.add(ctx.mkAnd(implication, currentPackage, conflicts));
+                    List<BoolExpr> implication = getAllDependencyConstraints(p, p.getDepends());
+                    implication.add(buildConflicts(currentPackage, p.getConflicts()));
+                    implicationList.add(ctx.mkImplies(currentPackage, ctx.mkAnd(implication.toArray(new BoolExpr [implication.size()]))));
                 }
                 finalExpression.add(ctx.mkOr(include.toArray(new BoolExpr[include.size()])));
                 finalExpression.add(ctx.mkOr(implicationList.toArray(new BoolExpr[implicationList.size()])));
             } else {
-                String temp = constr.replace(Constants.EXCLUDE, " ");
+                String temp = constr.replace(Constants.EXCLUDE, "");
                 List<Package> current  = getPackageVersions(temp);
                 List<BoolExpr> exclude = new ArrayList<>();
                 for(Package p : current){
@@ -52,11 +48,29 @@ public class Resolver {
                     BoolExpr c = ctx.mkBoolConst(p.getName() + "=" + p.getVersion());
                     exclude.add(ctx.mkNot(c));
                 }
-                finalExpression.addAll(exclude);
             }
         }
 
-        solver.add(ctx.mkAnd(finalExpression.toArray(new BoolExpr[finalExpression.size()])));
+        for(Package p : repo){
+            if(!usedRepo.contains(p)){
+                usedRepo.add(p);
+                BoolExpr currentPackage = ctx.mkBoolConst(p.getName() + "=" + p.getVersion());
+                List<BoolExpr> implication = getAllDependencyConstraints(p, p.getDepends());
+                implication.add(buildConflicts(currentPackage, p.getConflicts()));
+                finalExpression.add(ctx.mkImplies(currentPackage, ctx.mkAnd(implication.toArray(new BoolExpr [implication.size()]))));
+            }
+        }
+        BoolExpr result = ctx.mkAnd(finalExpression.toArray(new BoolExpr[finalExpression.size()]));
+        solver.add(result);
+        if(solver.check() == Status.SATISFIABLE){
+            System.out.println("Result Available");
+            Model m = solver.getModel();
+            List<FuncDecl> dec = new ArrayList<>(Arrays.asList(m.getDecls()));
+            dec.forEach(d -> System.out.println(d.getName().toString()));
+            System.out.println(m.toString());
+        } else {
+            System.out.println("Result Unavailable");
+        }
     }
 
     public void findDependencies(Package p){
@@ -71,51 +85,50 @@ public class Resolver {
 
     public List<Package> getPackageVersions(String p){
         String comparator = "";
-
-        if(p.contains(Constants.EQUAL)){
-            comparator = Constants.EQUAL;
-        } else if(p.contains(Constants.GREATER_OR_EQUAL)){
+        if(p.contains(Constants.GREATER_OR_EQUAL)){
             comparator = Constants.GREATER_OR_EQUAL;
-        } else if(p.contains(Constants.LESS_OR_EQUAL)){
+        }
+        else if(p.contains(Constants.LESS_OR_EQUAL)){
             comparator = Constants.LESS_OR_EQUAL;
         } else if(p.contains(Constants.GREATER_THAN)) {
             comparator = Constants.GREATER_THAN;
         } else if(p.contains(Constants.LESS_THAN)){
             comparator = Constants.LESS_THAN;
+        }  else if(p.contains(Constants.EQUAL)){
+            comparator = Constants.EQUAL;
         }
-
-        String[] versionList = p.split(comparator);
 
         List<Package> packages = new ArrayList<>();
 
-        for(Package sp: repo){
-            if(versionList.length == 1 && versionList[0] == sp.getName()){
-                packages.add(sp);
-            } else if (sp.getName() == versionList[0] && Package.checkVersion(versionList[1], sp.getVersion(), comparator)) {
-                packages.add(sp);
+        if(comparator.isEmpty()){
+            for(Package sp : repo){
+                if(p.equals(sp.getName())){
+                    packages.add(sp);
+                }
+            }
+        } else {
+            String[] versionList = p.split(comparator);
+            for(Package sp: repo){
+                if (versionList[0].equals(sp.getName()) && Package.checkVersion(versionList[1], sp.getVersion(), comparator)) {
+                    packages.add(sp);
+                }
             }
         }
+
 
         return packages;
     }
 
-    public BoolExpr getAllDependencyConstraints(Package current, List<List<String>> packages){
-        BoolExpr [] constraint = new BoolExpr[packages.size()];
-        for(int i = 0; i < packages.size(); i++){
+    public List<BoolExpr> getAllDependencyConstraints(Package current, List<List<String>> packages){
+        List<BoolExpr> constraint = new ArrayList<>();
 
-            if(packages.get(i).size() == 1){
-                constraint[i] = buildOrs(getPackageVersions(packages.get(i).get(0)));
-            } else{
+        for(List<String> pak : packages){
+
                 List<BoolExpr> option = new ArrayList<>();
-                packages.get(i).forEach(p -> option.add(buildOrs(getPackageVersions(p))));
-                constraint[i] = ctx.mkOr(option.toArray(new BoolExpr[option.size()]));
-            }
+                pak.forEach(p -> option.add(buildOrs(getPackageVersions(p))));
+                constraint.add(ctx.mkOr(option.toArray(new BoolExpr[option.size()])));
         }
-
-        BoolExpr ands = ctx.mkAnd(constraint);
-        BoolExpr currentBool = ctx.mkBoolConst(current.getName() + "=" + current.getVersion());
-
-        return ctx.mkAnd(currentBool, ands);
+        return constraint;
     }
 
     /**
@@ -139,7 +152,6 @@ public class Resolver {
         for(String c : conflicts){
             conflictList.addAll(getPackageVersions(c));
         }
-        result.add(current);
         for (Package c : conflictList) {
             BoolExpr d = ctx.mkBoolConst(c.getName() + "=" + c.getVersion());
             result.add(ctx.mkNot(d));
