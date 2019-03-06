@@ -23,7 +23,11 @@ public class Resolver {
 
     }
 
-    public void Run(){
+    /**
+     * Finds the final state
+     * @return A final state in a string list or null if none was found
+     */
+    public List<String> Run(){
         for(String constr : con){
             if(constr.contains(Constants.INCLUDE)){
                 String temp = constr.replace(Constants.INCLUDE, "");
@@ -73,22 +77,15 @@ public class Resolver {
                     result.add(d.getName().toString());
             });
             result.forEach(r -> System.out.println(r));
+            return result;
         } else {
             System.out.println("Result Unavailable");
+            return null;
         }
     }
 
-    public void findDependencies(Package p){
-        List<Package> packages = new ArrayList<>();
-        for(Package r : repo){
-            if(r.getName().equals(p.getName())){
-                packages.add(r);
-            }
 
-        }
-    }
-
-    public List<Package> getPackageVersions(String p){
+    private List<Package> getPackageVersions(String p){
         String comparator = "";
         if(p.contains(Constants.GREATER_OR_EQUAL)){
             comparator = Constants.GREATER_OR_EQUAL;
@@ -122,7 +119,7 @@ public class Resolver {
         return packages;
     }
 
-    public List<BoolExpr> getAllDependencyConstraints(Package current, List<List<String>> packages){
+    private List<BoolExpr> getAllDependencyConstraints(Package current, List<List<String>> packages){
         List<BoolExpr> constraint = new ArrayList<>();
 
         for(List<String> pak : packages){

@@ -19,8 +19,7 @@ public class Main {
     };
     List<String> initial = JSON.parseObject(readFile(args[1]), strListType);
     Resolver r = new Resolver(repo, JSON.parseObject(readFile(args[2]), strListType));
-    r.Run();
-    List<String> con = JSON.parseObject(readFile(args[2]), strListType);
+    List<String> finalState = r.Run();
   }
 
   static String readFile(String filename) throws IOException {
