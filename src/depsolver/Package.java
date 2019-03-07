@@ -96,6 +96,24 @@ public class Package implements Comparable<Package> {
         return validVersion;
     }
 
+    public static String getComparator(String p){
+        String comparator = "";
+        if(p.contains(Constants.GREATER_OR_EQUAL)){
+            comparator = Constants.GREATER_OR_EQUAL;
+        }
+        else if(p.contains(Constants.LESS_OR_EQUAL)){
+            comparator = Constants.LESS_OR_EQUAL;
+        } else if(p.contains(Constants.GREATER_THAN)) {
+            comparator = Constants.GREATER_THAN;
+        } else if(p.contains(Constants.LESS_THAN)){
+            comparator = Constants.LESS_THAN;
+        }  else if(p.contains(Constants.EQUAL)){
+            comparator = Constants.EQUAL;
+        }
+
+        return comparator;
+    }
+
     @Override
     public int compareTo(Package o) {
         return this.name.compareTo(o.getName());
