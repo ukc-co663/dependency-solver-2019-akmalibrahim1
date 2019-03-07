@@ -114,6 +114,22 @@ public class Package implements Comparable<Package> {
         return comparator;
     }
 
+    /**
+     * Obtain package from repo with a given name and version
+     * @param repo The repo list to search from
+     * @param name Name of the package you are looking for
+     * @param version The version of the package
+     * @return The package if found else null
+     */
+    public static Package getPackage(List<Package> repo, String name, String version){
+        for(Package p : repo){
+            if(p.getName().equals(name) && p.getVersion().equals(version)){
+                return p;
+            }
+        }
+        return null;
+    }
+
     @Override
     public int compareTo(Package o) {
         return this.name.compareTo(o.getName());
