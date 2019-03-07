@@ -86,19 +86,7 @@ public class Resolver {
 
 
     private List<Package> getPackageVersions(String p){
-        String comparator = "";
-        if(p.contains(Constants.GREATER_OR_EQUAL)){
-            comparator = Constants.GREATER_OR_EQUAL;
-        }
-        else if(p.contains(Constants.LESS_OR_EQUAL)){
-            comparator = Constants.LESS_OR_EQUAL;
-        } else if(p.contains(Constants.GREATER_THAN)) {
-            comparator = Constants.GREATER_THAN;
-        } else if(p.contains(Constants.LESS_THAN)){
-            comparator = Constants.LESS_THAN;
-        }  else if(p.contains(Constants.EQUAL)){
-            comparator = Constants.EQUAL;
-        }
+        String comparator = Package.getComparator(p);
 
         List<Package> packages = new ArrayList<>();
 
