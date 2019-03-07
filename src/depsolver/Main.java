@@ -18,8 +18,10 @@ public class Main {
     TypeReference<List<String>> strListType = new TypeReference<List<String>>() {
     };
     List<String> initial = JSON.parseObject(readFile(args[1]), strListType);
+
     Resolver r = new Resolver(repo, JSON.parseObject(readFile(args[2]), strListType));
     List<String> finalState = r.Run();
+    List<SatPackage> finalPackages = generateFinalStatePackage(finalState, repo);
   }
 
   static String readFile(String filename) throws IOException {
@@ -27,5 +29,19 @@ public class Main {
     StringBuilder sb = new StringBuilder();
     br.lines().forEach(line -> sb.append(line));
     return sb.toString();
+  }
+
+  static List<SatPackage> generateFinalStatePackage(List<String> finalState, List<Package> repo){
+    List<SatPackage> result = new ArrayList<>();
+    for(String p : finalState){
+      String [] packageInfo = p.split(Constants.EQUAL);
+      result.add(new SatPackage(packageInfo[0], packageInfo[1]));
+    }
+
+    result.forEach(p -> {
+      p.setDependenciesAndConflicts(result, repo);
+      System.out.println(p.toString());
+    });
+    return result;
   }
 }
