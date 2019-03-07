@@ -20,7 +20,7 @@ public class Commands {
     public void BuildCommandsList() {
         for(String s : finalState){
             String [] nxt = s.split(Constants.EQUAL);
-            Package p = getPackage(nxt[0], nxt[1]);
+            Package p = Package.getPackage(repo, nxt[0], nxt[1]);
             if(inital.contains(createInstallCommand(p))){
 
             }
@@ -33,21 +33,6 @@ public class Commands {
 
         }
         return false;
-    }
-
-    /**
-     * Obtain package from repo with a given name and version
-     * @param name Name of the package you are looking for
-     * @param version The version of the package
-     * @return
-     */
-    public Package getPackage(String name, String version){
-        for(Package p : repo){
-            if(p.getName().equals(name) && p.getVersion().equals(version)){
-                return p;
-            }
-        }
-        return null;
     }
 
     //TODO Complete uninstallation process
