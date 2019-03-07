@@ -76,7 +76,6 @@ public class Resolver {
                 if(m.getConstInterp(d).getBoolValue() == Z3_lbool.Z3_L_TRUE)
                     result.add(d.getName().toString());
             });
-            result.forEach(r -> System.out.println(r));
             return result;
         } else {
             System.out.println("Result Unavailable");
@@ -147,6 +146,4 @@ public class Resolver {
 
         return ctx.mkAnd(result.toArray(new BoolExpr[result.size()]));
     }
-
-
 }
