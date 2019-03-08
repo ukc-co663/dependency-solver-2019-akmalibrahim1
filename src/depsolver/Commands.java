@@ -1,14 +1,11 @@
 package depsolver;
 
-import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
-
 import java.util.*;
 
 public class Commands {
     private HashMap<String, SatPackage> initial;
-//    private List<String> inital;
     private List<SatPackage> finalState;
-    private Stack<SatPackage> waitingList;
+    private Stack<String> waitingList;
     private LinkedList<String> finalCommands;
     public Commands (HashMap<String, SatPackage> repo, List<SatPackage> finalState){
         this.initial = repo;
@@ -18,33 +15,78 @@ public class Commands {
     }
 
     //TODO Complete command calls to create a final list of commands
-    public void BuildCommandsList() {
+    public List<String> BuildCommandsList() {
         for(SatPackage s : finalState){
-            if(initial.containsKey(createInstallCommand(s))){
-                checkDependenciesInstalled(s);
-            }
+                boolean isMissing = installDependencies(s);
+                if(!isMissing){
+                    initial.put(createPackageVersionKey(s), s);
+                    finalCommands.add(createInstallCommand(s));
+                }
+//            if(initial.containsKey(createInstallCommand(s))){
+//                boolean isMissing = installDependencies(s);
+//
+//                if(!isMissing){
+//                    initial.put(createPackageVersionKey(s), s);
+//                    finalCommands.add(createInstallCommand(s));
+//                }
+//
+//            } else {
+//                initial.put(createPackageVersionKey(s), s);
+//                finalCommands.add(createInstallCommand(s));
+//            }
         }
+        return finalCommands;
     }
 
     //TODO Install necessary dependencies
-    public boolean checkDependenciesInstalled(SatPackage p){
+    public boolean installDependencies(SatPackage p){
         for(HashSet<SatPackage> s : p.getDependencies()){
             for(SatPackage sat: s) {
                 if (!initial.containsKey(createPackageVersionKey(sat))) {
-                    //Uninstall
+                    uninstallConflicts(sat);
+                    initial.put(createPackageVersionKey(sat), sat);
+                    finalCommands.add(createInstallCommand(sat));
                 }
             }
         }
-        return false;
+        if(initial.containsValue(p)){
+            return true;
+        }
+        else{
+            return false;
+        }
     }
 
     public void uninstallConflicts(SatPackage p){
+        p.getConflicts().forEach(conflict -> {
+            String comparator = Package.getComparator(conflict);
+            Iterator<SatPackage> ite = initial.values().iterator();
+            if(comparator.equals("")){
+                while(ite.hasNext()){
+                    SatPackage v = ite.next();
+                    if(v.getPackageName().equals(conflict)){
+                        uninstallDependencies(v);
+                    }
+                }
+            } else {
+                String[] conflictSplit = conflict.split(comparator);
+                while(ite.hasNext()){
+                    SatPackage v = ite.next();
+                    if(v.getPackageName().equals(conflictSplit[0]) && Package.checkVersion(conflictSplit[1], v.getPackageVersion(), comparator)){
+                        uninstallDependencies(v);
+                    }
+                }
+            }
+            while (!waitingList.empty()){
+                initial.remove(waitingList.pop());
+            }
+        });
     }
 
     public void uninstallDependencies(SatPackage p){
-        if(p.getDependents().size() < 0){
+        if(p.getDependents().isEmpty()){
             finalCommands.add(createUninstallCommand(p));
-            initial.remove(createPackageVersionKey(p));
+            waitingList.push(createUninstallCommand(p));
         } else {
            Iterator<SatPackage> ite = p.getDependents().iterator();
            while(ite.hasNext()){
@@ -52,7 +94,7 @@ public class Commands {
                if(checkForOnlyDependency(s, p)){
                    uninstallDependencies(s);
                }
-               initial.remove(createPackageVersionKey(s));
+               waitingList.push(createUninstallCommand(p));
                finalCommands.add(createUninstallCommand(s));
            }
         }
