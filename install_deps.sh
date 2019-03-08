@@ -5,6 +5,7 @@ wget -O lib/fastjson-1.2.45.jar http://search.maven.org/remotecontent?filepath=c
 git clone https://github.com/Z3Prover/z3.git
 cd z3
 python scripts/mk_make.py --java
+ls build
 cp build/com.microsoft.z3.jar ../lib
 cd build
 make
