@@ -22,6 +22,7 @@ public class Main {
     Resolver r = new Resolver(repo, JSON.parseObject(readFile(args[2]), strListType));
     List<String> finalState = r.Run();
     List<SatPackage> finalPackages = generateFinalStatePackage(finalState, repo);
+    HashMap<String, SatPackage> hashedRepo = generateHashedRepo(initial, repo);
   }
 
   static String readFile(String filename) throws IOException {
@@ -44,4 +45,24 @@ public class Main {
     });
     return result;
   }
+
+  static HashMap<String, SatPackage> generateHashedRepo(List<String> initial, List<Package> repo){
+    List<SatPackage> result = new ArrayList<>();
+    for(String p : initial){
+      String temp = p.replace("+", "");
+      String [] packageInfo = temp.split(Constants.EQUAL);
+      result.add(new SatPackage(packageInfo[0], packageInfo[1]));
+    }
+
+    HashMap<String, SatPackage> hashedRepo = new HashMap<>();
+
+    result.forEach(p -> {
+      p.setDependenciesAndConflicts(result, repo);
+      hashedRepo.put(p.getPackageName() + "=" + p.getPackageVersion(), p);
+      System.out.println(p.toString());
+    });
+
+    return hashedRepo;
+  }
+
 }
