@@ -68,7 +68,6 @@ public class Resolver {
         BoolExpr finalExpression = ctx.mkAnd(expressionsLlist.toArray(new BoolExpr[expressionsLlist.size()]));
         solver.add(finalExpression);
         if(solver.check() == Status.SATISFIABLE){
-            System.out.println("Result Available");
             Model m = solver.getModel();
             List<FuncDecl> dec = new ArrayList<>(Arrays.asList(m.getConstDecls()));
             List<String> result = new ArrayList<>();
@@ -78,7 +77,6 @@ public class Resolver {
             });
             return result;
         } else {
-            System.out.println("Result Unavailable");
             return null;
         }
     }
