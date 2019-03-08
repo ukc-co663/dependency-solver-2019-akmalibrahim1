@@ -19,12 +19,13 @@ public class Main {
     TypeReference<List<String>> strListType = new TypeReference<List<String>>() {
     };
     List<String> initial = JSON.parseObject(readFile(args[1]), strListType);
+    List<String> constraints = JSON.parseObject(readFile(args[2]), strListType);
+    Resolver r = new Resolver(repo, constraints);
 
-    Resolver r = new Resolver(repo, JSON.parseObject(readFile(args[2]), strListType));
     List<String> finalState = r.Run();
     List<SatPackage> finalPackages = generateFinalStatePackage(finalState, repo);
     HashMap<String, SatPackage> hashedRepo = generateHashedRepo(initial, repo);
-    Commands commands = new Commands(hashedRepo, finalPackages);
+    Commands commands = new Commands(hashedRepo, finalPackages, constraints);
     List<String> result = commands.BuildCommandsList();
     JSONArray mJSONArray = new JSONArray();
     mJSONArray.addAll(result);
