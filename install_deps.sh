@@ -7,7 +7,7 @@ cd z3
 python scripts/mk_make.py --java
 cd build
 make examples
-pwd
+ls
 cp ./com.microsoft.z3.jar ../../lib
 make
 sudo make install
