@@ -7,11 +7,13 @@ public class Commands {
     private List<SatPackage> finalState;
     private Stack<String> waitingList;
     private LinkedList<String> finalCommands;
-    public Commands (HashMap<String, SatPackage> repo, List<SatPackage> finalState){
+    private List<String> constraints;
+    public Commands (HashMap<String, SatPackage> repo, List<SatPackage> finalState, List<String> constraints){
         this.initial = repo;
         this.finalState = finalState;
         waitingList = new Stack<>();
         finalCommands = new LinkedList<>();
+        this.constraints = constraints;
     }
 
     //TODO Complete command calls to create a final list of commands
@@ -22,19 +24,14 @@ public class Commands {
                     initial.put(createPackageVersionKey(s), s);
                     finalCommands.add(createInstallCommand(s));
                 }
-//            if(initial.containsKey(createInstallCommand(s))){
-//                boolean isMissing = installDependencies(s);
-//
-//                if(!isMissing){
-//                    initial.put(createPackageVersionKey(s), s);
-//                    finalCommands.add(createInstallCommand(s));
-//                }
-//
-//            } else {
-//                initial.put(createPackageVersionKey(s), s);
-//                finalCommands.add(createInstallCommand(s));
-//            }
         }
+
+        constraints.forEach(c -> {
+            if(c.contains("-")) {
+                uninstall(c.replace("-","" ));
+            }
+        });
+
         return finalCommands;
     }
 
@@ -59,31 +56,40 @@ public class Commands {
 
     public void uninstallConflicts(SatPackage p){
         p.getConflicts().forEach(conflict -> {
-            String comparator = Package.getComparator(conflict);
-            Iterator<SatPackage> ite = initial.values().iterator();
-            if(comparator.equals("")){
-                while(ite.hasNext()){
-                    SatPackage v = ite.next();
-                    if(v.getPackageName().equals(conflict)){
-                        uninstallDependencies(v);
-                    }
-                }
-            } else {
-                String[] conflictSplit = conflict.split(comparator);
-                while(ite.hasNext()){
-                    SatPackage v = ite.next();
-                    if(v.getPackageName().equals(conflictSplit[0]) && Package.checkVersion(conflictSplit[1], v.getPackageVersion(), comparator)){
-                        uninstallDependencies(v);
-                    }
-                }
-            }
-            while (!waitingList.empty()){
-                initial.remove(waitingList.pop());
-            }
+           uninstall(conflict);
         });
     }
 
-    public void uninstallDependencies(SatPackage p){
+    public void uninstall(String conflict){
+        String comparator = Package.getComparator(conflict);
+        Iterator<SatPackage> ite = initial.values().iterator();
+        if(comparator.equals("")){
+            while(ite.hasNext()){
+                SatPackage v = ite.next();
+                if(v.getPackageName().equals(conflict)){
+                    uninstallByDependents(v);
+                    finalCommands.add(createUninstallCommand(v));
+                    waitingList.push(createPackageVersionKey(v));
+                }
+            }
+        } else {
+            String[] conflictSplit = conflict.split(comparator);
+            while(ite.hasNext()){
+                SatPackage v = ite.next();
+                if(v.getPackageName().equals(conflictSplit[0]) && Package.checkVersion(conflictSplit[1], v.getPackageVersion(), comparator)){
+                    uninstallByDependents(v);
+                    finalCommands.add(createUninstallCommand(v));
+                    waitingList.push(createPackageVersionKey(v));
+                }
+            }
+        }
+
+        while (!waitingList.empty()){
+            initial.remove(waitingList.pop());
+        }
+    }
+
+    public void uninstallByDependents(SatPackage p){
         if(p.getDependents().isEmpty()){
             finalCommands.add(createUninstallCommand(p));
             waitingList.push(createUninstallCommand(p));
@@ -92,7 +98,7 @@ public class Commands {
            while(ite.hasNext()){
                SatPackage s = ite.next();
                if(checkForOnlyDependency(s, p)){
-                   uninstallDependencies(s);
+                   uninstallByDependents(s);
                }
                waitingList.push(createUninstallCommand(p));
                finalCommands.add(createUninstallCommand(s));
