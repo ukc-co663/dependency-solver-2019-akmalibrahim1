@@ -1,6 +1,7 @@
 package depsolver;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.TypeReference;
 
 import java.io.BufferedReader;
@@ -23,6 +24,11 @@ public class Main {
     List<String> finalState = r.Run();
     List<SatPackage> finalPackages = generateFinalStatePackage(finalState, repo);
     HashMap<String, SatPackage> hashedRepo = generateHashedRepo(initial, repo);
+    Commands commands = new Commands(hashedRepo, finalPackages);
+    List<String> result = commands.BuildCommandsList();
+    JSONArray mJSONArray = new JSONArray();
+    mJSONArray.addAll(result);
+    System.out.println(mJSONArray.toJSONString());
   }
 
   static String readFile(String filename) throws IOException {
@@ -38,10 +44,8 @@ public class Main {
       String [] packageInfo = p.split(Constants.EQUAL);
       result.add(new SatPackage(packageInfo[0], packageInfo[1]));
     }
-
     result.forEach(p -> {
       p.setDependenciesAndConflicts(result, repo);
-      System.out.println(p.toString());
     });
     return result;
   }
@@ -59,7 +63,6 @@ public class Main {
     result.forEach(p -> {
       p.setDependenciesAndConflicts(result, repo);
       hashedRepo.put(p.getPackageName() + "=" + p.getPackageVersion(), p);
-      System.out.println(p.toString());
     });
 
     return hashedRepo;
