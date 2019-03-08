@@ -6,7 +6,8 @@ git clone https://github.com/Z3Prover/z3.git
 cd z3
 pwd
 python scripts/mk_make.py --java
-cp build/com.microsoft.z3.jar ../lib
 cd build
+make examples
+cp ./com.microsoft.z3.jar ../../lib
 make
 sudo make install
