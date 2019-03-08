@@ -1,51 +1,111 @@
 package depsolver;
 
+import com.sun.xml.internal.bind.v2.runtime.reflect.Lister;
+
 import java.util.*;
 
 public class Commands {
-    private List<Package> repo;
-    private List<String> inital;
-    private List<String> finalState;
-    private HashSet<Package> waitingList;
-    private LinkedHashMap<String, String> finalCommands;
-    public Commands (List<Package> repo, List<String> inital, List<String> finalState){
-        this.repo = repo;
-        this.inital = inital;
+    private HashMap<String, SatPackage> initial;
+//    private List<String> inital;
+    private List<SatPackage> finalState;
+    private Stack<SatPackage> waitingList;
+    private LinkedList<String> finalCommands;
+    public Commands (HashMap<String, SatPackage> repo, List<SatPackage> finalState){
+        this.initial = repo;
         this.finalState = finalState;
-        waitingList = new HashSet<>();
-        finalCommands = new LinkedHashMap<>();
+        waitingList = new Stack<>();
+        finalCommands = new LinkedList<>();
     }
 
     //TODO Complete command calls to create a final list of commands
     public void BuildCommandsList() {
-        for(String s : finalState){
-            String [] nxt = s.split(Constants.EQUAL);
-            Package p = Package.getPackage(repo, nxt[0], nxt[1]);
-            if(inital.contains(createInstallCommand(p))){
-
+        for(SatPackage s : finalState){
+            if(initial.containsKey(createInstallCommand(s))){
+                checkDependenciesInstalled(s);
             }
         }
     }
 
     //TODO Install necessary dependencies
-    public boolean isDependenciesInstalled(Package p){
-        for(List<String> dep : p.getDepends()){
-
+    public boolean checkDependenciesInstalled(SatPackage p){
+        for(HashSet<SatPackage> s : p.getDependencies()){
+            for(SatPackage sat: s) {
+                if (!initial.containsKey(createPackageVersionKey(sat))) {
+                    //Uninstall
+                }
+            }
         }
         return false;
     }
 
-    //TODO Complete uninstallation process
-    public String uninstallDependencies(Package p){
-        if(p.getConflicts().isEmpty()){
-            System.out.println("No Packages uninstall");
-        } else {
-            String uninstall = "";
-        }
-        return null;
+    public void uninstallConflicts(SatPackage p){
     }
 
-    static String createInstallCommand(Package p){
-        return "+" + p.getName() + "=" + p.getVersion();
+    public void uninstallDependencies(SatPackage p){
+        if(p.getDependents().size() < 0){
+            finalCommands.add(createUninstallCommand(p));
+            initial.remove(createPackageVersionKey(p));
+        } else {
+           Iterator<SatPackage> ite = p.getDependents().iterator();
+           while(ite.hasNext()){
+               SatPackage s = ite.next();
+               if(checkForOnlyDependency(s, p)){
+                   uninstallDependencies(s);
+               }
+               initial.remove(createPackageVersionKey(s));
+               finalCommands.add(createUninstallCommand(s));
+           }
+        }
+    }
+
+    /**
+     * Checks if this is this package only relies on one dependent
+     * @param p Current package
+     * @param dep The package dependency
+     * @return true if it is the only dependency false if not
+     */
+    public boolean checkForOnlyDependency(SatPackage p, SatPackage dep){
+        for(HashSet<SatPackage> sat : p.getDependencies()) {
+            if(sat.contains(dep) && sat.size() > 1){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static String createPackageVersionKey(SatPackage p){
+        return p.getPackageName() + "=" + p.getPackageVersion();
+    }
+
+    static String createInstallCommand(SatPackage p){
+        return "+" + createPackageVersionKey(p);
+    }
+
+    static String createUninstallCommand(SatPackage p){
+        return "-" + createPackageVersionKey(p);
     }
 }
+
+//    String conflictCommands = "";
+//        for(String conflict : p.getConflicts()){
+//                String comparator = Package.getComparator(conflict);
+//                for(String installed : inital){
+//                String temp = installed.replace("+", "");
+//                String [] tempList = temp.split(Constants.EQUAL);
+//                if(comparator.isEmpty() && conflict.equals(tempList[0])){
+//                conflictCommands = createUninstallCommand(p) + "\n";
+//                inital.forEach(v -> {
+//                Package pack = repo.get(v.replace("+", ""));
+//
+//                });
+//                conflictCommands = resolveConflicts(repo.get(tempList[0] + "=" + tempList[1])) + conflictCommands;
+//                } else {
+//                String [] conflictTemp = conflict.split(comparator);
+//                if(conflictTemp[0].equals(tempList[0]) &&  Package.checkVersion(conflictTemp[1], tempList[1], comparator)){
+//                conflictCommands = createUninstallCommand(p) + "\n";
+//                conflictCommands = resolveConflicts(repo.get(tempList[0] + "=" + tempList[1])) + conflictCommands;
+//                }
+//                }
+//                }
+//                }
+//                return conflictCommands;
