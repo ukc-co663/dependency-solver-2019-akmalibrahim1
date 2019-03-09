@@ -10,4 +10,4 @@ make examples
 ls
 cp ./com.microsoft.z3.jar ../../lib
 make
-sudo make install
+make install
