@@ -1,4 +1,4 @@
 #!/bin/bash
 CLASSPATH=classes:classes/
 #classes:$(ls lib/* | sed 's/ /:/')
-java -cp classes/:lib/* -Djava.library.path=/Users/akmalibrahim/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib:. depsolver.Main $@
+java -cp classes/:lib/* depsolver.Main $@
