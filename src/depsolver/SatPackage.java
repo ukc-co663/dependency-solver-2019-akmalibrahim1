@@ -21,28 +21,37 @@ public class SatPackage {
 
     public void setDependenciesAndConflicts(List<SatPackage> finalState, List<Package> repo) {
         Package p = Package.getPackage(repo, packageName, packageVersion);
-        this.conflicts = p.getConflicts();
-        for (List<String> deps : p.getDepends()) {
-            HashSet<SatPackage> innerD = new HashSet<>();
-            for (String innerDeps : deps) {
-                for (SatPackage sat : finalState) {
-                    String comparator = Package.getComparator(innerDeps);
-                    String[] expectedPackage = innerDeps.split(comparator);
-                    if (comparator.equals("")) {
-                        if (sat.packageName.equals(innerDeps)) {
+
+        try {
+            this.conflicts = p.getConflicts();
+        }  catch (Exception e){
+            System.out.println(e.getMessage());
+        }
+        try {
+            for (List<String> deps : p.getDepends()) {
+                HashSet<SatPackage> innerD = new HashSet<>();
+                for (String innerDeps : deps) {
+                    for (SatPackage sat : finalState) {
+                        String comparator = Package.getComparator(innerDeps);
+                        String[] expectedPackage = innerDeps.split(comparator);
+                        if (comparator.equals("")) {
+                            if (sat.packageName.equals(innerDeps)) {
+                                innerD.add(sat);
+                                break;
+                            }
+                        } else if (sat.packageName.equals(expectedPackage[0]) && Package.checkVersion(expectedPackage[1], sat.packageVersion, comparator)) {
                             innerD.add(sat);
                             break;
                         }
-                    } else if (sat.packageName.equals(expectedPackage[0]) && Package.checkVersion(expectedPackage[1], sat.packageVersion, comparator)) {
-                        innerD.add(sat);
+                    }
+                    if (!innerD.isEmpty()) {
                         break;
                     }
                 }
-                if (!innerD.isEmpty()) {
-                    break;
-                }
+                this.dependencies.add(innerD);
             }
-            this.dependencies.add(innerD);
+        } catch(Exception e){
+            System.out.println(e.getMessage());
         }
     }
 

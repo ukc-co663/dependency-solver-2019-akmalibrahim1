@@ -24,6 +24,7 @@ public class Main {
 
     List<String> finalState = r.Run();
     List<SatPackage> finalPackages = generateFinalStatePackage(finalState, repo);
+    finalPackages.forEach(f -> System.out.println(f.toString()));
     HashMap<String, SatPackage> hashedRepo = generateHashedRepo(initial, repo);
     Commands commands = new Commands(hashedRepo, finalPackages, constraints);
     List<String> result = commands.BuildCommandsList();
