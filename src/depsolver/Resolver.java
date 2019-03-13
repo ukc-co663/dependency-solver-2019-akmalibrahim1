@@ -74,7 +74,6 @@ public class Resolver {
         }
 
         BoolExpr finalExpression = ctx.mkAnd(expressionsList.toArray(new BoolExpr[expressionsList.size()]));
-        System.out.println(finalExpression.toString());
         solver.add(finalExpression);
         if (solver.check() == Status.SATISFIABLE) {
             Model m = solver.getModel();
@@ -84,7 +83,6 @@ public class Resolver {
                 if (m.getConstInterp(d).getBoolValue() == Z3_lbool.Z3_L_TRUE)
                     result.add(d.getName().toString());
             });
-            System.out.println(m.toString());
             return result;
         } else {
             return null;
