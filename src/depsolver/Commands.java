@@ -19,6 +19,13 @@ public class Commands {
 
     //TODO Investigate unnecessary installation
     public List<String> BuildCommandsList() {
+
+        constraints.forEach(c -> {
+            if (c.contains("-")) {
+                uninstall(c.replace("-", ""));
+            }
+        });
+
         for (SatPackage s : finalState) {
             boolean isMissing = installDependencies(s);
             if (!isMissing ) {
@@ -26,12 +33,6 @@ public class Commands {
                 finalCommands.add(createInstallCommand(s));
             }
         }
-
-        constraints.forEach(c -> {
-            if (c.contains("-")) {
-                uninstall(c.replace("-", ""));
-            }
-        });
 
         return finalCommands;
     }
