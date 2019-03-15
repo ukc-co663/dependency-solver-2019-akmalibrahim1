@@ -1,4 +1,4 @@
 #!/bin/bash
-CLASSPATH=classes:classes/
-#classes:$(ls lib/* | sed 's/ /:/')
-java -cp classes/:lib/* depsolver.Main $@
+CLASSPATH=classes:$(ls lib/* | tr ' \n ' '::')
+java -cp $CLASSPATH depsolver.Main $@
+
